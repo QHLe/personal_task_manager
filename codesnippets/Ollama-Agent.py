@@ -40,9 +40,10 @@ model = model.bind(functions=functions)
 result = model.invoke("how is the weather today in Friedrichshafen Germany?")
 
 # Print the result
-print(result)
+#print(result)
 
 #%% Use the LLM response to call the tool
+
 from langgraph.prebuilt import ToolInvocation
 from langgraph.prebuilt import ToolExecutor
 import json
@@ -56,8 +57,18 @@ action = ToolInvocation(
         ),
     )
 
-print(action)
-print(tool_executor.invoke(action))
+# print(action)
+# print(tool_executor.invoke(action))
 
 # %% Call the model and execute the tool at once
+
+from langchain import hub
+from langchain.agents import AgentExecutor, create_openai_functions_agent
+
+prompt = hub.pull("hwchase17/openai-functions-agent")
+
+agent = create_openai_functions_agent(model, tools, prompt)
+
+agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
+agent_executor.invoke({"input": "What is the breaking news for today?"})
 
