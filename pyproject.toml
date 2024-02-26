@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "personal-task-manager"
+version = "0.1.0"
+description = "a task manager powered by LLLM"
+authors = ["Quang Hoa Le"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+langchain = "^0.1.9"
+langgraph = "^0.0.26"
+langsmith = "^0.1.8"
+grafana = "^0.0.1"
+ipykernel = "^6.29.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
