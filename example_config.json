@@ -1,0 +1,5 @@
+{
+    "caldav_url":"<https://your-domain/remote.php/dav/>", 
+    "username": "<username>",
+    "password": "<password>"
+}
