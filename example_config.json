@@ -1,5 +1,8 @@
 {
     "caldav_url":"<https://your-domain/remote.php/dav/>", 
     "username": "<username>",
-    "password": "<password>"
+    "password": "<password>",
+    "mic_channel": 14,
+    "whisper_model": "medium",
+    "language": "de"
 }
