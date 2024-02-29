@@ -1,6 +1,7 @@
 import json
 from unicodedata import category
 from caldav import DAVClient, objects
+import vobject
 
 # Load user credentials from a JSON file
 with open('config.json') as json_data_file:
@@ -23,44 +24,25 @@ tasks = task_list.todos()
 # Print the names of the calendars
 print(task_list.name)
 
+vtodos = []
 for task in tasks:
-    vtodo = task.instance.vtodo
-    uid = getattr(vtodo, 'uid', None)
-    summary = getattr(vtodo, 'summary', None)
-    status = getattr(vtodo, 'status', None)
-    due = getattr(vtodo, 'due', None)
-    description = getattr(vtodo, 'description', None)
-    start = getattr(vtodo, 'dtstart', None)
-    prio = getattr(vtodo, 'priority', None)
-    categories = getattr(vtodo, 'categories', None)
-    location = getattr(vtodo, 'location', None)
-    organizer = getattr(vtodo, 'organizer', None)
-    attendee = getattr(vtodo, 'attendee', None)
-    print("\n")
-    if uid is not None:
-        print(f"UID: {uid.value}")
-    if summary is not None:
-        print(f"Summary: {summary.value}")
-    if status is not None:
-        print(f"Status: {status.value}")
-    if due is not None:
-        print(f"Due: {due.value}")
-    if description is not None:
-        print(f"Description: {description.value}")
-    if prio is not None:
-        print(f"Prio: {prio.value}")
-    if location is not None:
-        print(f"location: {location.value}")
-    if start is not None:
-        print(f"Start date: {start.value}")
-    if categories is not None:
-        print(f"Categories: {categories.value}")
-    if attendee is not None:
-        print(f"attendee: {attendee.value}")
-    if organizer is not None:
-        print(f"organizer: {organizer.value}")
+    cal = vobject.readOne(task.data)
+    for component in cal.components():
+        if component.name == 'VTODO':
+            vtodo_dict = {}
+            for key in component.contents:
+                vtodo_dict[key] = component.contents[key][0].value
+            vtodos.append(vtodo_dict)
     
+import pandas as pd
+
+df = pd.DataFrame(vtodos)
+
+print(df)
+
+print(df.columns)
+
 # Create a new task
-new_task = task_list.add_todo(summary='My new created Task', description='This is a new task', priority=1)
+new_task = task_list.add_todo(summary='My new created Task', description='This is a new task', priority=1, dtstart='2020-08-07T15:30:00Z', due='2020-08-07T16:30:00Z', status=objects.VTODO_STATUS_NEEDS_ACTION)
 # Save the task
 new_task.save()

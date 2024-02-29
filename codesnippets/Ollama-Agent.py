@@ -1,5 +1,15 @@
-#%% Create tools
+import os
+import json
 
+# Load user credentials from a JSON file
+with open('config.json') as json_data_file:
+    data = json.load(json_data_file)
+
+os.environ["LANGCHAIN_API_KEY"] = data["LANGCHAIN_API_KEY"]
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_PROJECT"]=data["LANGCHAIN_PROJECT_NAME"]
+
+#%% Create tools
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool, StructuredTool, tool
 
@@ -70,5 +80,5 @@ prompt = hub.pull("hwchase17/openai-functions-agent")
 agent = create_openai_functions_agent(model, tools, prompt)
 
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
-agent_executor.invoke({"input": "What is the breaking news for today?"})
+agent_executor.invoke({"input": "Hi My name is David, how are you?"})
 
