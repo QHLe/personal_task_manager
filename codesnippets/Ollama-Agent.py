@@ -6,7 +6,7 @@ with open('config.json') as json_data_file:
     data = json.load(json_data_file)
 
 os.environ["LANGCHAIN_API_KEY"] = data["LANGCHAIN_API_KEY"]
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
 os.environ["LANGCHAIN_PROJECT"]=data["LANGCHAIN_PROJECT_NAME"]
 
 #%% Create tools
