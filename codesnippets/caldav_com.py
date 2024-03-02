@@ -1,3 +1,4 @@
+#%%
 import json
 from unicodedata import category
 from caldav import DAVClient, objects
@@ -9,8 +10,10 @@ with open('config.json') as json_data_file:
 
 # Connect to the CalDAV server
 client = DAVClient(url=data["caldav_url"], username=data["username"], password=data["password"], ssl_verify_cert=False)
-
+print(type(client))
 # Get the principal
+
+#%%
 principal = client.principal()
 
 # Get the calendars

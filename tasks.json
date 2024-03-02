@@ -1,26 +1,7 @@
-[
-    {
-        "id": 1,
-        "name": "Task 1",
-        "description": "This is task 1",
-        "status": "complete"
-    },
-    {
-        "id": 2,
-        "name": "Task 2",
-        "description": "This is task 2",
-        "status": "incomplete"
-    },
-    {
-        "id": 1,
-        "name": "Task 1",
-        "description": "This is task 1",
-        "status": "complete"
-    },
-    {
-        "id": 2,
-        "name": "Task 2",
-        "description": "This is task 2",
-        "status": "incomplete"
-    }
-]
+{
+    "class": "optional - classification if the task is confidencial or not",
+    "description": "mandatory - short description or list of subtasks written in markdown format",
+    "priority": "optional - 1 to 5. 1 is the highest priority",
+    "due": "optional - use the following format 2023-10-04 14:33:05+00:00",
+    "summary":"mandatory - this is the title of the task. Use a meaningful name"
+}
