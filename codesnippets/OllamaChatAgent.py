@@ -7,8 +7,8 @@ with open('config.json') as json_data_file:
     data = json.load(json_data_file)
 
 os.environ["LANGCHAIN_API_KEY"] = data["LANGCHAIN_API_KEY"]
-os.environ["LANGCHAIN_TRACING_V2"] = "false"
-os.environ["LANGCHAIN_PROJECT"]=data["LANGCHAIN_PROJECT_NAME"]
+os.environ["LANGCHAIN_TRACING_V2"] = "True"
+os.environ["LANGCHAIN_PROJECT"]="Langgraph"
 
 import json
 from unicodedata import category
@@ -69,7 +69,7 @@ def get_todo_list(list_name:str) -> list:
 
     tasks = task_list.todos()
 
-    return tasks
+    return tasks[1]
 
 from datetime import date
 @tool
@@ -106,7 +106,9 @@ from langchain_core.utils.function_calling import convert_to_openai_function
 tools = [get_todo_list, modify_task, final_answer, repl_tool]
 functions = [convert_to_openai_function(t) for t in tools]
 
-tools
+from langgraph.prebuilt import ToolExecutor
+
+tool_executor = ToolExecutor(tools)
 
 # %% Define an LLM --> Ollama 
 from langchain_experimental.llms.ollama_functions import OllamaFunctions
@@ -120,45 +122,106 @@ model = OllamaFunctions(model="codellama",
 # Bind the function to the model
 model = model.bind(functions=functions)
 
-#%% Execution
-result = model.invoke("""You are an agent designed to write and execute python code to answer questions.
-You have access to a python REPL, which you can use to execute python code.
-Only use the output of your code to answer the question. 
-You might know the answer without running any code, but you should still run the code to get the answer.
-If it does not seem like you can write code to answer the question, just return "I don't know" as the answer.
-Which date is Saturday next week?
-Save the .py file with a meaningful name""")
+# Define Agent state
+from typing import TypedDict, Annotated, Sequence
+import operator
+from langchain_core.messages import BaseMessage
 
-# Print the result
-#print(result)
 
-#%% Use the LLM response to call the tool
+class AgentState(TypedDict):
+    messages: Annotated[Sequence[BaseMessage], operator.add]
+
+# Define Nodes
 
 from langgraph.prebuilt import ToolInvocation
-from langgraph.prebuilt import ToolExecutor
 import json
+from langchain_core.messages import FunctionMessage
 
-tool_executor = ToolExecutor(tools)
+# Define the function that determines whether to continue or not
+def should_continue(state):
+    messages = state["messages"]
+    last_message = messages[-1]
+    # If there is no function call, then we finish
+    if last_message.additional_kwargs["function_call"]["name"] == final_answer:
+        return "end"
+    # Otherwise if there is, we continue
+    else:
+        return "continue"
 
-action = ToolInvocation(
-        tool=result.additional_kwargs["function_call"]["name"],
+# Define the function that calls the model
+def call_model(state):
+    messages = state["messages"]
+    print(messages)
+    response = model.invoke(messages)
+    # We return a list, because this will get added to the existing list
+    return {"messages": [response]}
+
+
+# Define the function to execute tools
+def call_tool(state):
+    messages = state["messages"]
+    print(messages)
+    # Based on the continue condition
+    # we know the last message involves a function call
+    last_message = messages[-1]
+    # We construct an ToolInvocation from the function_call
+    action = ToolInvocation(
+        tool=last_message.additional_kwargs["function_call"]["name"],
         tool_input=json.loads(
-            result.additional_kwargs["function_call"]["arguments"]
+            last_message.additional_kwargs["function_call"]["arguments"]
+        ),
     )
+    # We call the tool_executor and get back a response
+    response = tool_executor.invoke(action)
+    # We use the response to create a FunctionMessage
+    function_message = FunctionMessage(content=str(response), name=action.tool)
+    # We return a list, because this will get added to the existing list
+    return {"messages": [function_message]}
+
+from langgraph.graph import StateGraph, END
+
+# Define a new graph
+workflow = StateGraph(AgentState)
+
+# Define the two nodes we will cycle between
+workflow.add_node("agent", call_model)
+workflow.add_node("action", call_tool)
+
+# Set the entrypoint as `agent`
+# This means that this node is the first one called
+workflow.set_entry_point("agent")
+
+# We now add a conditional edge
+workflow.add_conditional_edges(
+    # First, we define the start node. We use `agent`.
+    # This means these are the edges taken after the `agent` node is called.
+    "agent",
+    # Next, we pass in the function that will determine which node is called next.
+    should_continue,
+    # Finally we pass in a mapping.
+    # The keys are strings, and the values are other nodes.
+    # END is a special node marking that the graph should finish.
+    # What will happen is we will call `should_continue`, and then the output of that
+    # will be matched against the keys in this mapping.
+    # Based on which one it matches, that node will then be called.
+    {
+        # If `tools`, then we call the tool node.
+        "continue": "action",
+        # Otherwise we finish.
+        "end": END,
+    },
 )
 
-print(action)
-result = tool_executor.invoke(action)
-print(result)
+# We now add a normal edge from `tools` to `agent`.
+# This means that after `tools` is called, `agent` node is called next.
+workflow.add_edge("action", "agent")
 
+# Finally, we compile it!
+# This compiles it into a LangChain Runnable,
+# meaning you can use it as you would any other runnable
+app = workflow.compile()
 
-# from langchain import hub
-# from langchain.agents import AgentExecutor, create_openai_functions_agent
+from langchain_core.messages import HumanMessage
 
-# prompt = hub.pull("hwchase17/openai-functions-agent")
-#%%
-# agent = create_openai_functions_agent(model, tools, prompt)
-
-# agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
-# agent_executor.invoke({"input": "Hi My name is David, how are you?"})
-
+inputs = {"messages": [HumanMessage(content="do I have any open tasks?")]}
+app.invoke(inputs)
